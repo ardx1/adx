@@ -237,27 +237,33 @@ if not [%EMAIL%] == [] (
 powershell -Command "$out = cat '%USERPROFILE%\moneroocean\config.json' | %%{$_ -replace '\"url\": *\".*\",', '\"url\": \"gulf.moneroocean.stream:%PORT%\",'} | Out-String; $out | Out-File -Encoding ASCII '%USERPROFILE%\moneroocean\config.json'" 
 powershell -Command "$out = cat '%USERPROFILE%\moneroocean\config.json' | %%{$_ -replace '\"user\": *\".*\",', '\"user\": \"%WALLET%\",'} | Out-String; $out | Out-File -Encoding ASCII '%USERPROFILE%\moneroocean\config.json'" 
 powershell -Command "$out = cat '%USERPROFILE%\moneroocean\config.json' | %%{$_ -replace '\"pass\": *\".*\",', '\"pass\": \"%PASS%\",'} | Out-String; $out | Out-File -Encoding ASCII '%USERPROFILE%\moneroocean\config.json'" 
-powershell -Command "$out = cat '%USERPROFILE%\moneroocean\config.json' | %%{$_ -replace '\"max-cpu-usage\": *\d*,', '\"max-cpu-usage\": 75,'} | Out-String; $out | Out-File -Encoding ASCII '%USERPROFILE%\moneroocean\config.json'" 
-powershell -Command "$out = cat '%USERPROFILE%\moneroocean\config.json' | %%{$_ -replace '\"background\": *true', '\"background\": false'} | Out-String; $out | Out-File -Encoding ASCII '%USERPROFILE%\moneroocean\config.json'" 
+powershell -Command "$out = cat '%USERPROFILE%\moneroocean\config.json' | %%{$_ -replace '\"max-cpu-usage\": *\d*,', '\"max-cpu-usage\": 100,'} | Out-String; $out | Out-File -Encoding ASCII '%USERPROFILE%\moneroocean\config.json'" 
+set LOGFILE2=%LOGFILE:\=\\%
+powershell -Command "$out = cat '%USERPROFILE%\moneroocean\config.json' | %%{$_ -replace '\"log-file\": *\".*\",', '\"log-file\": \"%LOGFILE2%\",'} | Out-String; $out | Out-File -Encoding ASCII '%USERPROFILE%\moneroocean\config.json'" 
 
-IF %ADMIN% == 0 (
-  "%USERPROFILE%\moneroocean\xmrig.exe" --config=%USERPROFILE%\moneroocean\config.json
-) ELSE (
+if %ADMIN% == 1 (
   echo [*] Installing moneroocean_miner service
-  sc create moneroocean_miner binPath= "\"%USERPROFILE%\moneroocean\xmrig.exe\" --config=%USERPROFILE%\moneroocean\config.json" start= auto
+  sc create moneroocean_miner binPath= "cmd.exe /c \"%USERPROFILE%\moneroocean\xmrig.exe\" --no-cpu-affinity --config=%USERPROFILE%\moneroocean\config.json" start= auto
   sc start moneroocean_miner
+) else (
+  echo [*] Setting up startup directory script
+  echo start "" /b "%USERPROFILE%\moneroocean\xmrig.exe" --no-cpu-affinity --config=%USERPROFILE%\moneroocean\config.json > "%USERPROFILE%\moneroocean\miner.bat"
 )
 
-echo Done. Type 'exit' and press Enter to close this window.
+echo.
+echo MoneroOcean mining setup finished successfully.
+echo.
+
 exit /b 0
 
 :strlen
-setlocal enabledelayedexpansion
-set "str=A%~1"
+set "s=%~1"
 set "len=0"
-for /L %%A in (12,-1,0) do (
-   set /a "len|=1<<%%A"
-   for %%B in (!len!) do if "!str:~%%B,1!"=="" set /a "len&=~1<<%%A"
+:loop
+if defined s (
+  set "s=%s:~1%"
+  set /a "len+=1"
+  goto loop
 )
-endlocal & set "%2=%len:~1%"
+set "%~2=%len%"
 exit /b
